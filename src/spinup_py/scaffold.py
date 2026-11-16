@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -157,6 +158,16 @@ def run_new(project_name: str | None, non_interactive: bool = False) -> None:
         config = run_prompts(project_name)
     dest_dir = str(Path.cwd() / config.project_name)
     scaffold(dest_dir, config, non_interactive=non_interactive)
+
+
+def run_from_config(config_path: str) -> None:
+    """Scaffold a new project from a JSON file of ``ProjectConfig`` fields, with no prompts."""
+    try:
+        config = ProjectConfig.create(**json.loads(Path(config_path).read_text()))
+    except (OSError, ValueError, TypeError) as exc:
+        console.print(f"[red]Invalid config {config_path}: {exc}[/red]")
+        raise SystemExit(2) from exc
+    scaffold(str(Path.cwd() / config.project_name), config, non_interactive=True)
 
 
 def _serena_fallback(project_dir: Path, project_name: str) -> None:

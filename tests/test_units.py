@@ -349,3 +349,61 @@ def test_scaffold_run_raises_on_nonzero(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setattr(scaffold_mod.subprocess, "run", fake_subprocess_run)
     with pytest.raises(_CommandError):
         scaffold_mod._run(["git", "status"], cwd=tmp_path)
+
+
+def _write_config(tmp_path: Path, **overrides: object) -> Path:
+    import json
+
+    data = {
+        "project_name": "cfg-proj",
+        "description": "from json",
+        "author": "A",
+        "email": "a@b.co",
+        "github_handle": "ab",
+        **overrides,
+    }
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(data))
+    return path
+
+
+def test_run_from_config_scaffolds_non_interactive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        scaffold_mod,
+        "scaffold",
+        lambda dest, cfg, non_interactive=False: captured.update(dest=dest, cfg=cfg, ni=non_interactive),
+    )
+    path = _write_config(tmp_path, python_version="3.11", dockerfile=True)
+
+    scaffold_mod.run_from_config(str(path))
+
+    cfg = captured["cfg"]
+    assert isinstance(cfg, ProjectConfig)
+    assert (cfg.project_name, cfg.python_version, cfg.dockerfile) == ("cfg-proj", "3.11", True)
+    assert captured["ni"] is True
+    assert captured["dest"] == str(tmp_path.resolve() / "cfg-proj")
+
+
+@pytest.mark.parametrize("overrides", [{"bogus_field": 1}, {"python_version": "2.7"}, {"project_name": "Bad Name"}])
+def test_run_from_config_rejects_invalid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, overrides: dict) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(scaffold_mod, "scaffold", lambda *a, **k: pytest.fail("must not scaffold"))
+    path = _write_config(tmp_path, **overrides)
+
+    with pytest.raises(SystemExit) as exc:
+        scaffold_mod.run_from_config(str(path))
+    assert exc.value.code == 2
+
+
+def test_cli_new_config_flag_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    from typer.testing import CliRunner
+
+    from spinup_py.cli import app
+
+    called: list[str] = []
+    monkeypatch.setattr(scaffold_mod, "run_from_config", called.append)
+    result = CliRunner().invoke(app, ["--config", "/x/c.json"])
+    assert result.exit_code == 0
+    assert called == ["/x/c.json"]

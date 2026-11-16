@@ -28,7 +28,7 @@ echo "Target: $TARGET_DIR"
 ### Step 2 — Run the update command
 
 ```bash
-spinup-py update "$TARGET_DIR"
+spinup-py --update "$TARGET_DIR"
 ```
 
 This will:
@@ -38,18 +38,10 @@ This will:
 3. Apply the selected updates
 4. Print a summary
 
-If `spinup-py` is not on PATH, fall back to:
+If `spinup-py` is not on PATH, run it through uv instead (no install needed; `uv tool install spinup-py` installs it permanently):
 
 ```bash
-python3 -c "
-import sys
-# find plugin src
-import subprocess, pathlib
-plugin_root = pathlib.Path('$CLAUDE_PLUGIN_ROOT')
-sys.path.insert(0, str(plugin_root / 'src'))
-from spinup_py.update import update_project
-update_project('$TARGET_DIR')
-"
+uvx spinup-py --update "$TARGET_DIR"
 ```
 
 ### Step 3 — Report results

@@ -23,6 +23,13 @@ def main(
         metavar="DIR",
         help="Retrofit an existing project at DIR (default: current directory)",
     ),
+    config: str | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        metavar="FILE",
+        help="Scaffold from a JSON file of project settings, no prompts",
+    ),
     version: bool = typer.Option(False, "--version", "-v", help="Show version and exit"),
     non_interactive: bool = typer.Option(False, "--non-interactive", "-y", help="Scaffold with defaults, no prompts"),
 ) -> None:
@@ -43,6 +50,10 @@ def main(
         from spinup_py.update import update_project
 
         update_project(update or ".")
+    elif config is not None:
+        from spinup_py.scaffold import run_from_config
+
+        run_from_config(config)
     elif project_name is not None:
         from spinup_py.scaffold import run_new
 
