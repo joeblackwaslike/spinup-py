@@ -47,7 +47,7 @@ Show a summary table of the collected config and confirm with the user before pr
 
 ### Step 3 — Scaffold the project
 
-Write the collected values to a JSON file, then run `spinup-py --config` from the directory that should contain the new project. Use JSON `true`/`false` for booleans, and leave out any field the user kept at its default.
+Write the collected values to a JSON file, then run `spinup-py --config` from the directory that should contain the new project. Use JSON `true`/`false` for booleans. Always include `project_name`, `description`, `author`, `email` and `github_handle`, filling `author`, `email` and `github_handle` from the RC file when the user accepted those defaults, because `--config` does not read the RC file. The other fields may be left out to keep their defaults.
 
 ```bash
 CONFIG="$(mktemp)"
