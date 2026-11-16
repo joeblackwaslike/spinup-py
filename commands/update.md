@@ -38,10 +38,10 @@ This will:
 3. Apply the selected updates
 4. Print a summary
 
-If `spinup-py` is not on PATH, run it through uv instead (no install needed; `uv tool install spinup-py` installs it permanently):
+If `spinup-py` is not on PATH, run it from the plugin checkout through uv. The checkout holds the templates that update copies from; the PyPI wheel does not ship them, so `uvx spinup-py` can't apply template-backed updates:
 
 ```bash
-uvx spinup-py --update "$TARGET_DIR"
+uv run --project "$CLAUDE_PLUGIN_ROOT" spinup-py --update "$TARGET_DIR"
 ```
 
 ### Step 3 — Report results
