@@ -70,9 +70,10 @@ cat > "$CONFIG" << 'EOF'
 }
 EOF
 uvx spinup-py --config "$CONFIG"
+rm -f "$CONFIG"
 ```
 
-If `spinup-py` is already on PATH, run `spinup-py --config "$CONFIG"` instead.
+If `spinup-py` is already on PATH, run `spinup-py --config "$CONFIG"` instead. The file holds the user's name and email, so remove it either way.
 
 This creates `PROJECT_NAME/` in the current directory, makes the initial git commit, and sets up Beads and Serena (each is skipped with a notice if its tool is missing). If the config is invalid, the command prints the reason and exits with code 2. Fix the value and run it again.
 
