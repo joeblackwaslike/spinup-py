@@ -33,7 +33,7 @@ Ask the user for each of the following. If a default is available from the RC fi
 | `author`                 | string                                                                                                                     | RC default            |
 | `email`                  | email                                                                                                                      | RC default            |
 | `github_handle`          | string                                                                                                                     | RC default            |
-| `python_version`         | one of: 3.12, 3.11, 3.10, 3.9                                                                                              | 3.12                  |
+| `python_version`         | one of: 3.12, 3.11, 3.10                                                                                                   | 3.12                  |
 | `include_github_actions` | bool                                                                                                                       | true                  |
 | `devcontainer`           | bool                                                                                                                       | true                  |
 | `include_docs`           | bool (Docusaurus)                                                                                                          | false                 |
@@ -47,77 +47,44 @@ Show a summary table of the collected config and confirm with the user before pr
 
 ### Step 3 — Scaffold the project
 
-Find the plugin root and determine the destination directory. Then write and run a temp scaffold script:
+Write the collected values to a JSON file, then run `spinup-py --config` from the directory that should contain the new project. Use JSON `true`/`false` for booleans, and leave out any field the user kept at its default.
 
 ```bash
-# Find where spinup-py is installed
-PLUGIN_ROOT="$(python3 -c "import spinup_py, pathlib; print(pathlib.Path(spinup_py.__file__).parent.parent.parent)")"
-
-# Write temp script
-cat > /tmp/spinup-scaffold.py << 'PYEOF'
-import sys
-sys.path.insert(0, "PLUGIN_SRC_PATH")
-from spinup_py.scaffold import scaffold
-from spinup_py.types import ProjectConfig
-
-config = ProjectConfig.create(
-    project_name="PROJECT_NAME",
-    description="DESCRIPTION",
-    author="AUTHOR",
-    email="EMAIL",
-    github_handle="GITHUB_HANDLE",
-    python_version="PYTHON_VERSION",
-    include_github_actions=INCLUDE_GITHUB_ACTIONS,
-    devcontainer=DEVCONTAINER,
-    include_docs=INCLUDE_DOCS,
-    codecov=CODECOV,
-    dockerfile=DOCKERFILE,
-    deptry=DEPTRY,
-    publish_to_pypi=PUBLISH_TO_PYPI,
-    open_source_license="OPEN_SOURCE_LICENSE",
-)
-import os, pathlib
-dest = pathlib.Path(os.getcwd()) / config.project_name
-# Skip interactive git push prompt — handled separately below
-scaffold.__module__  # ensure import works
-
-from cookiecutter.main import cookiecutter
-cookiecutter(
-    str(pathlib.Path(sys.path[0]).parent),
-    no_input=True,
-    extra_context=config.to_cookiecutter_dict(),
-    output_dir=str(pathlib.Path(os.getcwd())),
-)
-print(f"Scaffolded: {dest}")
-PYEOF
-
-python3 /tmp/spinup-scaffold.py
+CONFIG="$(mktemp)"
+cat > "$CONFIG" << 'EOF'
+{
+  "project_name": "PROJECT_NAME",
+  "description": "DESCRIPTION",
+  "author": "AUTHOR",
+  "email": "EMAIL",
+  "github_handle": "GITHUB_HANDLE",
+  "python_version": "PYTHON_VERSION",
+  "include_github_actions": true,
+  "devcontainer": true,
+  "include_docs": false,
+  "codecov": false,
+  "dockerfile": false,
+  "deptry": true,
+  "publish_to_pypi": false,
+  "open_source_license": "MIT license"
+}
+EOF
+uvx spinup-py --config "$CONFIG"
 ```
 
-Replace each `PLACEHOLDER` with the collected values before running. Use `True`/`False` for boolean fields.
+If `spinup-py` is already on PATH, run `spinup-py --config "$CONFIG"` instead.
 
-### Step 4 — Post-scaffold setup
+This creates `PROJECT_NAME/` in the current directory, makes the initial git commit, and sets up Beads and Serena (each is skipped with a notice if its tool is missing). If the config is invalid, the command prints the reason and exits with code 2. Fix the value and run it again.
 
-After scaffolding, run from the newly created project directory:
-
-```bash
-cd PROJECT_NAME
-git init && git add -A && git commit -m "chore: initial scaffold from spinup-py"
-```
+### Step 4 — Push to GitHub (optional)
 
 Ask the user: "Push to GitHub? (public / private / skip)"
 
 If public or private:
 
 ```bash
+cd PROJECT_NAME
 gh repo create GITHUB_HANDLE/PROJECT_NAME --VISIBILITY --source=. --remote=origin --push
-```
-
-Run Beads and Serena init (errors are non-fatal):
-
-```bash
-bd init --skip-agents --non-interactive 2>/dev/null || true
-mkdir -p .serena && echo "project_name: PROJECT_NAME\nlanguage: python" > .serena/project.yml
 ```
 
 ### Step 5 — Summary
