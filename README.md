@@ -47,6 +47,12 @@ spinup-py my-project
 
 Follow the guided prompts to configure your project. Once complete, a new directory `my-project/` will be created with everything set up.
 
+To skip the prompts, put the settings in a JSON file (the fields of `ProjectConfig`: `project_name`, `description`, `author`, `email`, `github_handle`, plus optional `python_version`, `dockerfile`, and so on) and run:
+
+```shell
+spinup-py --config project.json
+```
+
 To retrofit an existing project with the latest tooling:
 
 ```shell
