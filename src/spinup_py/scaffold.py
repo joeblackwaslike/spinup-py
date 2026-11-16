@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import questionary
 from cookiecutter.exceptions import (  # type: ignore[import-untyped]
@@ -12,6 +13,7 @@ from cookiecutter.exceptions import (  # type: ignore[import-untyped]
 )
 from cookiecutter.main import cookiecutter  # type: ignore[import-untyped]
 from rich.console import Console
+from rich.markup import escape
 
 from spinup_py.types import ProjectConfig
 
@@ -160,12 +162,20 @@ def run_new(project_name: str | None, non_interactive: bool = False) -> None:
     scaffold(dest_dir, config, non_interactive=non_interactive)
 
 
+def _read_config_json(config_path: str) -> dict[str, Any]:
+    data = json.loads(Path(config_path).read_text())
+    if not isinstance(data, dict):
+        msg = f"top-level value must be a JSON object, got {type(data).__name__}"
+        raise TypeError(msg)
+    return data
+
+
 def run_from_config(config_path: str) -> None:
     """Scaffold a new project from a JSON file of ``ProjectConfig`` fields, with no prompts."""
     try:
-        config = ProjectConfig.create(**json.loads(Path(config_path).read_text()))
+        config = ProjectConfig.create(**_read_config_json(config_path))
     except (OSError, ValueError, TypeError) as exc:
-        console.print(f"[red]Invalid config {config_path}: {exc}[/red]")
+        console.print(f"[red]Invalid config {escape(config_path)}: {escape(str(exc))}[/red]")
         raise SystemExit(2) from exc
     scaffold(str(Path.cwd() / config.project_name), config, non_interactive=True)
 

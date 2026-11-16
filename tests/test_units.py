@@ -407,3 +407,51 @@ def test_cli_new_config_flag_routes(monkeypatch: pytest.MonkeyPatch) -> None:
     result = CliRunner().invoke(app, ["--config", "/x/c.json"])
     assert result.exit_code == 0
     assert called == ["/x/c.json"]
+
+
+_VALID_FIELDS = '"description": "d", "author": "a", "email": "e@b.co", "github_handle": "g"'
+
+
+@pytest.mark.parametrize(
+    "content",
+    ["{not json", "[]", "null", '"cfg-proj"', '{"project_name": 123, ' + _VALID_FIELDS + "}"],
+)
+def test_run_from_config_rejects_malformed_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, content: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(scaffold_mod, "scaffold", lambda *a, **k: pytest.fail("must not scaffold"))
+    path = tmp_path / "config.json"
+    path.write_text(content)
+
+    with pytest.raises(SystemExit) as exc:
+        scaffold_mod.run_from_config(str(path))
+    assert exc.value.code == 2
+
+
+def test_run_from_config_rejects_missing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(scaffold_mod, "scaffold", lambda *a, **k: pytest.fail("must not scaffold"))
+    with pytest.raises(SystemExit) as exc:
+        scaffold_mod.run_from_config(str(tmp_path / "nope.json"))
+    assert exc.value.code == 2
+
+
+def test_run_from_config_error_message_is_readable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+
+    from rich.console import Console
+
+    buf = io.StringIO()
+    monkeypatch.setattr(scaffold_mod, "console", Console(file=buf, width=200))
+    path = tmp_path / "config.json"
+
+    path.write_text("[]")
+    with pytest.raises(SystemExit):
+        scaffold_mod.run_from_config(str(path))
+    assert "must be a JSON object" in buf.getvalue()
+
+    buf.truncate(0)
+    path.write_text('{"project_name": "ok", ' + _VALID_FIELDS + ', "python_version": "2.7"}')
+    with pytest.raises(SystemExit):
+        scaffold_mod.run_from_config(str(path))
+    assert "input_value" in buf.getvalue()
